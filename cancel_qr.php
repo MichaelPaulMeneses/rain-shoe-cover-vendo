@@ -14,7 +14,7 @@ if (!$intentId) {
     exit;
 }
 
-$firebaseUrl = "https://vendo-machine-dbb9a-default-rtdb.asia-southeast1.firebasedatabase.app/payments/$intentId.json";
+$firebaseUrl = "https://vendo-machine-c75fb-default-rtdb.asia-southeast1.firebasedatabase.app/payments/$intentId.json";
 
 /* -------------------------
    GET current status
