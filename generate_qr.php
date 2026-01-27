@@ -16,7 +16,7 @@ $secretKey = "sk_live_WLCpGs66PbqcMjBaMVsuK5k6";
 $intentData = [
     "data" => [
         "attributes" => [
-            "amount" => 10000, // ₱100.00
+            "amount" => 100, // ₱100.00
             "currency" => "PHP",
             "payment_method_allowed" => ["qrph"],
             "capture_type" => "automatic",
@@ -135,4 +135,5 @@ if (isset($result["data"]["attributes"]["next_action"]["code"]["image_url"])) {
     echo "</pre>";
     exit;
 }
+
 ?>
