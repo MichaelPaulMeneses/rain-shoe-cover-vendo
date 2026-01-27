@@ -1,6 +1,6 @@
 <?php
 
-$firebaseUrl = "https://vendo-machine-dbb9a-default-rtdb.asia-southeast1.firebasedatabase.app/vendo.json";
+$firebaseUrl = "https://vendo-machine-c75fb-default-rtdb.asia-southeast1.firebasedatabase.app/vendo.json";
 
 
 $ch = curl_init($firebaseUrl);
