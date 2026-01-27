@@ -16,7 +16,7 @@ $secretKey = "sk_live_WLCpGs66PbqcMjBaMVsuK5k6";
 $intentData = [
     "data" => [
         "attributes" => [
-            "amount" => 1, // ₱100.00
+            "amount" => 100, // ₱1.00 (100 centavos = 1 peso)
             "currency" => "PHP",
             "payment_method_allowed" => ["qrph"],
             "capture_type" => "automatic",
@@ -106,7 +106,7 @@ $firebaseUrl = "https://vendo-machine-dbb9a-default-rtdb.asia-southeast1.firebas
 $firebaseData = [
     "datetime" => date("Y-m-d H:i:s"),
     "status" => "pending",
-    "amount" => 10000, 
+    "amount" => 100, // ₱1.00 (100 centavos)
     "description" => "Vendo Machine Purchase"
 ];
 
@@ -137,4 +137,3 @@ if (isset($result["data"]["attributes"]["next_action"]["code"]["image_url"])) {
 }
 
 ?>
-
