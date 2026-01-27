@@ -2,7 +2,7 @@
 name: Every Minute Render Ping
 on:
   schedule:
-    - cron: '0 * * * *'  # Runs every minute
+    - cron: '* * * * *'  # Runs every minute
   workflow_dispatch:  # Allows manual triggering
 jobs:
   curl-website:
