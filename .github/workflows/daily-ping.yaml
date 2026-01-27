@@ -1,0 +1,12 @@
+# Ping your render project every minute so that the service doesn't go down
+name: Every Minute Render Ping
+on:
+  schedule:
+    - cron: '* * * * *'  # Runs every minute
+  workflow_dispatch:  # Allows manual triggering
+jobs:
+  curl-website:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run cURL on Website
+        run: curl -I https://rain-shoe-cover-vendo.onrender.com
