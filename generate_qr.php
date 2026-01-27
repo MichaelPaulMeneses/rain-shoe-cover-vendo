@@ -1,13 +1,4 @@
 <?php
-header('Access-Control-Allow-Origin: https://vendo-machine-dbb9a.web.app');
-header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
-
 $secretKey = "sk_live_WLCpGs66PbqcMjBaMVsuK5k6";
 
 /* -------------------------------
@@ -16,11 +7,11 @@ $secretKey = "sk_live_WLCpGs66PbqcMjBaMVsuK5k6";
 $intentData = [
     "data" => [
         "attributes" => [
-            "amount" => 100, // ₱1.00 (100 centavos = 1 peso)
+            "amount" => 100, // ₱1.00
             "currency" => "PHP",
             "payment_method_allowed" => ["qrph"],
             "capture_type" => "automatic",
-            "description" => "Vendo Machine Purchase"
+            "description" => "Vendo Machine QR Test"
         ]
     ]
 ];
@@ -101,14 +92,16 @@ $intentId = $result["data"]["id"]; // payment intent ID
 // Add Firebase record for ESP32
 // -------------------------------
 
-$firebaseUrl = "https://vendo-machine-dbb9a-default-rtdb.asia-southeast1.firebasedatabase.app//payments/$intentId.json";
+$firebaseUrl = "https://vendo-machine-c75fb-default-rtdb.asia-southeast1.firebasedatabase.app/payments/$intentId.json";
+
 
 $firebaseData = [
     "datetime" => date("Y-m-d H:i:s"),
     "status" => "pending",
-    "amount" => 100, // ₱1.00 (100 centavos)
-    "description" => "Vendo Machine Purchase"
+    "amount" => 100, 
+    "description" => "Vendo Machine QR Test"
 ];
+
 
 $ch = curl_init($firebaseUrl);
 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT"); // create/update
@@ -125,6 +118,7 @@ curl_close($ch);
 if (isset($result["data"]["attributes"]["next_action"]["code"]["image_url"])) {
     
     $qrBase64 = $result["data"]["attributes"]["next_action"]["code"]["image_url"];
+    //echo "<img src='$qrBase64' width='300'>";
     echo '<div id="qrWrapper" data-intent-id="'.$intentId.'">
             <img src="'.$qrBase64.'" alt="QR Code" width="300">
         </div>';
@@ -137,3 +131,39 @@ if (isset($result["data"]["attributes"]["next_action"]["code"]["image_url"])) {
 }
 
 ?>
+
+
+<script>
+    // check payment status every 3 seconds
+    const intentId = "<?= $intentId ?>";
+
+    function checkStatus() {
+        fetch(`https://vendo-machine-c75fb-default-rtdb.asia-southeast1.firebasedatabase.app/payments/${intentId}.json`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data) return;
+
+                if (data.status === "expired") {
+                    const expiredModal = new bootstrap.Modal(document.getElementById('expiredModal'));
+                    expiredModal.show();
+
+                    // Reload the QR image
+                    setTimeout(() => {
+                        location.reload();
+                    }, 500);
+                }
+
+                if (data.status === "paid") {
+                    // Show success modal
+                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                    successModal.show();
+                    
+                    // Reload after 2 seconds
+                    setTimeout(() => {
+                        location.reload();
+                    }, 500);
+                }
+            });
+    }
+    setInterval(checkStatus, 3000); // every 3 seconds
+</script>
