@@ -1,26 +1,17 @@
 <?php
-header('Content-Type: application/json');
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// PayMongo API Configuration
 $secretKey = "sk_live_WLCpGs66PbqcMjBaMVsuK5k6";
-$firebaseUrl = "https://vendo-machine-c75fb-default-rtdb.asia-southeast1.firebasedatabase.app";
 
-// Amount in centavos (2000 = ₱20.00)
-$amount = 2000;
-
-/* ========================================
-   STEP 1: Create Payment Intent
-======================================== */
+/* -------------------------------
+ STEP 1: Create Payment Intent
+-------------------------------- */
 $intentData = [
     "data" => [
         "attributes" => [
-            "amount" => $amount,
+            "amount" => 100, // ₱1.00
             "currency" => "PHP",
             "payment_method_allowed" => ["qrph"],
             "capture_type" => "automatic",
-            "description" => "Rain Shoe Cover - Vending Machine"
+            "description" => "Vendo Machine QR Test"
         ]
     ]
 ];
@@ -33,43 +24,21 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($intentData));
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 
 $intentResponse = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
-if ($httpCode !== 200 && $httpCode !== 201) {
-    echo json_encode([
-        "success" => false,
-        "error" => "Failed to create payment intent",
-        "http_code" => $httpCode,
-        "response" => $intentResponse
-    ]);
-    exit;
-}
-
 $intent = json_decode($intentResponse, true);
-
-if (!isset($intent["data"]["id"])) {
-    echo json_encode([
-        "success" => false,
-        "error" => "Invalid intent response",
-        "response" => $intent
-    ]);
-    exit;
-}
-
 $intentId = $intent["data"]["id"];
 
-/* ========================================
-   STEP 2: Create QR Ph Payment Method
-======================================== */
+/* -------------------------------
+ STEP 2: Create QR Ph Payment Method
+-------------------------------- */
 $methodData = [
     "data" => [
         "attributes" => [
             "type" => "qrph",
-            "expiry_seconds" => 120 // 2 minutes
+            "expiry_seconds" => 60
         ]
     ]
 ];
@@ -82,38 +51,16 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($methodData));
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 
 $methodResponse = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
-if ($httpCode !== 200 && $httpCode !== 201) {
-    echo json_encode([
-        "success" => false,
-        "error" => "Failed to create payment method",
-        "http_code" => $httpCode,
-        "response" => $methodResponse
-    ]);
-    exit;
-}
-
 $method = json_decode($methodResponse, true);
-
-if (!isset($method["data"]["id"])) {
-    echo json_encode([
-        "success" => false,
-        "error" => "Invalid method response",
-        "response" => $method
-    ]);
-    exit;
-}
-
 $methodId = $method["data"]["id"];
 
-/* ========================================
-   STEP 3: Attach Payment Method to Intent
-======================================== */
+/* -------------------------------
+ STEP 3: Attach Payment Method
+-------------------------------- */
 $attachData = [
     "data" => [
         "attributes" => [
@@ -130,76 +77,93 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($attachData));
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
 
 $attachResponse = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
-
-if ($httpCode !== 200 && $httpCode !== 201) {
-    echo json_encode([
-        "success" => false,
-        "error" => "Failed to attach payment method",
-        "http_code" => $httpCode,
-        "response" => $attachResponse
-    ]);
-    exit;
-}
 
 $result = json_decode($attachResponse, true);
 
-/* ========================================
-   STEP 4: Extract QR Code Image
-======================================== */
-if (!isset($result["data"]["attributes"]["next_action"]["code"]["image_url"])) {
-    echo json_encode([
-        "success" => false,
-        "error" => "No QR code generated",
-        "response" => $result
-    ]);
-    exit;
-}
+/* -------------------------------
+ STEP 4: Show QR
+-------------------------------- */
+$intentId = $result["data"]["id"]; // payment intent ID
 
-$qrBase64Url = $result["data"]["attributes"]["next_action"]["code"]["image_url"];
-$intentId = $result["data"]["id"];
-$status = $result["data"]["attributes"]["status"];
+// -------------------------------
+// Add Firebase record for ESP32
+// -------------------------------
 
-/* ========================================
-   STEP 5: Save to Firebase
-======================================== */
+$firebaseUrl = "https://vendo-machine-c75fb-default-rtdb.asia-southeast1.firebasedatabase.app/payments/$intentId.json";
+
+
 $firebaseData = [
-    "intent_id" => $intentId,
-    "payment_method_id" => $methodId,
     "datetime" => date("Y-m-d H:i:s"),
-    "timestamp" => time(),
-    "status" => $status,
-    "amount" => $amount,
-    "currency" => "PHP",
-    "description" => "Rain Shoe Cover - Vending Machine",
-    "qr_expires_at" => date("Y-m-d H:i:s", time() + 120)
+    "status" => "pending",
+    "amount" => 100, 
+    "description" => "Vendo Machine QR Test"
 ];
 
-$ch = curl_init("$firebaseUrl/payments/$intentId.json");
-curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+
+$ch = curl_init($firebaseUrl);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT"); // create/update
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($firebaseData));
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
 
-$firebaseResponse = curl_exec($ch);
+$resultFirebase = curl_exec($ch);
 curl_close($ch);
 
-/* ========================================
-   STEP 6: Return Response
-======================================== */
-echo json_encode([
-    "success" => true,
-    "intent_id" => $intentId,
-    "payment_method_id" => $methodId,
-    "amount" => $amount,
-    "currency" => "PHP",
-    "status" => $status,
-    "qr_code_url" => $qrBase64Url,
-    "expires_in" => 120,
-    "firebase_saved" => ($firebaseResponse !== false)
-]);
+// -------------------------------
+// Show QR to user
+// -------------------------------
+if (isset($result["data"]["attributes"]["next_action"]["code"]["image_url"])) {
+    
+    $qrBase64 = $result["data"]["attributes"]["next_action"]["code"]["image_url"];
+    //echo "<img src='$qrBase64' width='300'>";
+    echo '<div id="qrWrapper" data-intent-id="'.$intentId.'">
+            <img src="'.$qrBase64.'" alt="QR Code" width="300">
+        </div>';
+
+} else {
+    echo "<pre>";
+    print_r($result);
+    echo "</pre>";
+    exit;
+}
+
 ?>
+
+
+<script>
+    // check payment status every 3 seconds
+    const intentId = "<?= $intentId ?>";
+
+    function checkStatus() {
+        fetch(`https://vendo-machine-c75fb-default-rtdb.asia-southeast1.firebasedatabase.app/payments/${intentId}.json`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data) return;
+
+                if (data.status === "expired") {
+                    const expiredModal = new bootstrap.Modal(document.getElementById('expiredModal'));
+                    expiredModal.show();
+
+                    // Reload the QR image
+                    setTimeout(() => {
+                        location.reload();
+                    }, 500);
+                }
+
+                if (data.status === "paid") {
+                    // Show success modal
+                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                    successModal.show();
+                    
+                    // Reload after 2 seconds
+                    setTimeout(() => {
+                        location.reload();
+                    }, 500);
+                }
+            });
+    }
+    setInterval(checkStatus, 3000); // every 3 seconds
+</script>
