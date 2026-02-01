@@ -121,17 +121,17 @@ if (isset($result["data"]["attributes"]["next_action"]["code"]["image_url"])) {
     $qrCodeUrl = $result["data"]["attributes"]["next_action"]["code"]["value"] ?? '';
     
     echo '<div id="qrWrapper" data-intent-id="'.$intentId.'" data-qr-url="'.htmlspecialchars($qrCodeUrl, ENT_QUOTES).'">
-            <img src="'.$qrBase64.'" alt="QR Code" width="300" id="qrCodeImage" crossorigin="anonymous">
+            <img src="'.$qrBase64.'" alt="QR Code" width="300" id="qrCodeImage">
             <div class="mt-3">
                 <p class="text-muted small mb-2">Scan with camera or:</p>
                 <div class="d-grid gap-2">
-                    <a href="#" class="btn btn-primary btn-sm" id="downloadQrBtn">
+                    <button class="btn btn-primary btn-sm" id="downloadQrBtn">
                         <svg width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16">
                             <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
                             <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
                         </svg>
                         Download QR Code
-                    </a>
+                    </button>
                     <div class="text-muted small mt-1 text-start" style="font-size: 0.8rem;">
                         <strong>To pay with GCash/Maya:</strong><br>
                         1. Click "Download QR Code" above<br>
@@ -149,109 +149,4 @@ if (isset($result["data"]["attributes"]["next_action"]["code"]["image_url"])) {
     echo "</pre>";
     exit;
 }
-
 ?>
-
-
-<script>
-    // check payment status every 3 seconds
-    const intentId = "<?= $intentId ?>";
-
-    // Download QR functionality - FIXED VERSION
-    document.addEventListener('DOMContentLoaded', function() {
-        const downloadBtn = document.getElementById('downloadQrBtn');
-        
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                console.log('Download button clicked'); // Debug
-                
-                try {
-                    const qrImg = document.getElementById('qrCodeImage');
-                    const imgSrc = qrImg.src;
-                    
-                    console.log('Image source:', imgSrc.substring(0, 50)); // Debug
-                    
-                    // Create canvas to convert base64 to blob properly
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    
-                    // Set canvas size to match image
-                    canvas.width = qrImg.naturalWidth || qrImg.width;
-                    canvas.height = qrImg.naturalHeight || qrImg.height;
-                    
-                    // Draw image on canvas
-                    const img = new Image();
-                    img.onload = function() {
-                        ctx.drawImage(img, 0, 0);
-                        
-                        // Convert canvas to blob
-                        canvas.toBlob(function(blob) {
-                            // Create download link
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'payment-qr-code.png';
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            URL.revokeObjectURL(url);
-                            
-                            console.log('Download triggered'); // Debug
-                            
-                            // Show success message
-                            downloadBtn.innerHTML = '<svg width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/></svg> Downloaded!';
-                            
-                            setTimeout(() => {
-                                downloadBtn.innerHTML = '<svg width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg> Download QR Code';
-                            }, 2000);
-                            
-                        }, 'image/png');
-                    };
-                    
-                    img.onerror = function() {
-                        console.error('Image load error'); // Debug
-                        alert('Error loading QR code. Please try again or long-press the QR code to save it.');
-                    };
-                    
-                    img.src = imgSrc;
-                    
-                } catch (err) {
-                    console.error('Download error:', err);
-                    alert('Download failed. Please try:\n1. Long-press the QR code image\n2. Select "Save Image" or "Download Image"');
-                }
-            });
-        }
-    });
-
-    function checkStatus() {
-        fetch(`https://vendo-machine-c75fb-default-rtdb.asia-southeast1.firebasedatabase.app/payments/${intentId}.json`)
-            .then(res => res.json())
-            .then(data => {
-                if (!data) return;
-
-                if (data.status === "expired") {
-                    const expiredModal = new bootstrap.Modal(document.getElementById('expiredModal'));
-                    expiredModal.show();
-
-                    // Reload the QR image
-                    setTimeout(() => {
-                        location.reload();
-                    }, 500);
-                }
-
-                if (data.status === "paid") {
-                    // Show success modal
-                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                    successModal.show();
-                    
-                    // Reload after 2 seconds
-                    setTimeout(() => {
-                        location.reload();
-                    }, 500);
-                }
-            });
-    }
-    setInterval(checkStatus, 3000); // every 3 seconds
-</script>
