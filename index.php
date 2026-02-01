@@ -125,9 +125,59 @@ document.addEventListener("DOMContentLoaded", () => {
     const qrModalEl = document.getElementById("myModal");
 
     let intentId = null;
-
     let showDispensing = null;
 
+    // ---- Download QR Function (using event delegation) ----
+    function downloadQRCode() {
+        const qrImg = document.getElementById('qrCodeImage');
+        const downloadBtn = document.getElementById('downloadQrBtn');
+        
+        if (!qrImg) {
+            alert('QR Code not found. Please try generating again.');
+            return;
+        }
+
+        console.log('Starting download...');
+
+        try {
+            // Get the base64 image source
+            const imgSrc = qrImg.src;
+            
+            // Create a temporary link element
+            const link = document.createElement('a');
+            link.href = imgSrc;
+            link.download = 'payment-qr-code.png';
+            
+            // Append to body, click, and remove
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            console.log('Download triggered');
+            
+            // Update button text
+            if (downloadBtn) {
+                const originalHTML = downloadBtn.innerHTML;
+                downloadBtn.innerHTML = '<svg width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16"><path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/></svg> Downloaded!';
+                
+                setTimeout(() => {
+                    downloadBtn.innerHTML = originalHTML;
+                }, 2000);
+            }
+            
+        } catch (err) {
+            console.error('Download error:', err);
+            alert('Download failed. Please:\n1. Long-press the QR code\n2. Select "Save Image"');
+        }
+    }
+
+    // ---- Event Delegation for Download Button ----
+    qrContainer.addEventListener('click', function(e) {
+        if (e.target.id === 'downloadQrBtn' || e.target.closest('#downloadQrBtn')) {
+            console.log('Download button clicked via delegation');
+            downloadQRCode();
+        }
+    });
 
     // ---- Load QR when modal opens ----
     qrModalEl.addEventListener("shown.bs.modal", () => {
@@ -143,54 +193,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 intentId = wrapper?.dataset.intentId;
 
                 console.log("Intent ID:", intentId);
-
-                // 🔥 ATTACH EVENT LISTENERS TO DEEP LINK BUTTONS
-                attachDeepLinkHandlers();
+                console.log("QR loaded, download button should be ready");
             })
             .catch(() => {
                 qrContainer.innerHTML = "Error loading QR";
             });
     });
-
-    // ---- Function to attach deep link handlers ----
-    function attachDeepLinkHandlers() {
-        const gcashBtn = document.querySelector('.open-gcash');
-        const mayaBtn = document.querySelector('.open-maya');
-
-        if (gcashBtn) {
-            gcashBtn.addEventListener('click', function() {
-                const qrUrl = this.dataset.qrUrl;
-                if (qrUrl) {
-                    // Try to open GCash app with deep link
-                    // Format: gcash://qr?data=<qr_url>
-                    const deepLink = `gcash://qr?data=${encodeURIComponent(qrUrl)}`;
-                    window.location.href = deepLink;
-                    
-                    // Fallback: if app doesn't open in 2 seconds, show instruction
-                    setTimeout(() => {
-                        alert('If GCash app did not open, please make sure it is installed on your device.');
-                    }, 2000);
-                }
-            });
-        }
-
-        if (mayaBtn) {
-            mayaBtn.addEventListener('click', function() {
-                const qrUrl = this.dataset.qrUrl;
-                if (qrUrl) {
-                    // Try to open Maya app with deep link
-                    // Format: maya://qr?data=<qr_url>
-                    const deepLink = `paymaya://qr?data=${encodeURIComponent(qrUrl)}`;
-                    window.location.href = deepLink;
-                    
-                    // Fallback: if app doesn't open in 2 seconds, show instruction
-                    setTimeout(() => {
-                        alert('If Maya app did not open, please make sure it is installed on your device.');
-                    }, 2000);
-                }
-            });
-        }
-    }
 
     // ---- Cancel QR ----
     cancelBtn.addEventListener("click", () => {
@@ -272,7 +280,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
-setInterval(checkState, 3000);
+    setInterval(checkState, 3000);
 
 });
 </script>
