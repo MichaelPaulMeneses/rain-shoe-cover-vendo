@@ -118,9 +118,27 @@ curl_close($ch);
 if (isset($result["data"]["attributes"]["next_action"]["code"]["image_url"])) {
     
     $qrBase64 = $result["data"]["attributes"]["next_action"]["code"]["image_url"];
-    //echo "<img src='$qrBase64' width='300'>";
-    echo '<div id="qrWrapper" data-intent-id="'.$intentId.'">
+    $qrCodeUrl = $result["data"]["attributes"]["next_action"]["code"]["value"] ?? '';
+    
+    echo '<div id="qrWrapper" data-intent-id="'.$intentId.'" data-qr-url="'.htmlspecialchars($qrCodeUrl, ENT_QUOTES).'">
             <img src="'.$qrBase64.'" alt="QR Code" width="300">
+            <div class="mt-3">
+                <p class="text-muted small mb-2">Or open directly in your app:</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <button class="btn btn-outline-primary btn-sm open-gcash" data-qr-url="'.htmlspecialchars($qrCodeUrl, ENT_QUOTES).'">
+                        <svg width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16">
+                            <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zM4.5 7.5a.5.5 0 0 1 0-1h5.793L8.146 4.354a.5.5 0 1 1 .708-.708l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708-.708L10.293 7.5H4.5z"/>
+                        </svg>
+                        Open GCash
+                    </button>
+                    <button class="btn btn-outline-success btn-sm open-maya" data-qr-url="'.htmlspecialchars($qrCodeUrl, ENT_QUOTES).'">
+                        <svg width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16">
+                            <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zM4.5 7.5a.5.5 0 0 1 0-1h5.793L8.146 4.354a.5.5 0 1 1 .708-.708l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708-.708L10.293 7.5H4.5z"/>
+                        </svg>
+                        Open Maya
+                    </button>
+                </div>
+            </div>
         </div>';
 
 } else {
