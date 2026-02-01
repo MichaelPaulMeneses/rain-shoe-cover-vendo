@@ -143,13 +143,56 @@ document.addEventListener("DOMContentLoaded", () => {
                 intentId = wrapper?.dataset.intentId;
 
                 console.log("Intent ID:", intentId);
+
+                // 🔥 ATTACH EVENT LISTENERS TO DEEP LINK BUTTONS
+                attachDeepLinkHandlers();
             })
             .catch(() => {
                 qrContainer.innerHTML = "Error loading QR";
             });
     });
 
-        // ---- Cancel QR ----
+    // ---- Function to attach deep link handlers ----
+    function attachDeepLinkHandlers() {
+        const gcashBtn = document.querySelector('.open-gcash');
+        const mayaBtn = document.querySelector('.open-maya');
+
+        if (gcashBtn) {
+            gcashBtn.addEventListener('click', function() {
+                const qrUrl = this.dataset.qrUrl;
+                if (qrUrl) {
+                    // Try to open GCash app with deep link
+                    // Format: gcash://qr?data=<qr_url>
+                    const deepLink = `gcash://qr?data=${encodeURIComponent(qrUrl)}`;
+                    window.location.href = deepLink;
+                    
+                    // Fallback: if app doesn't open in 2 seconds, show instruction
+                    setTimeout(() => {
+                        alert('If GCash app did not open, please make sure it is installed on your device.');
+                    }, 2000);
+                }
+            });
+        }
+
+        if (mayaBtn) {
+            mayaBtn.addEventListener('click', function() {
+                const qrUrl = this.dataset.qrUrl;
+                if (qrUrl) {
+                    // Try to open Maya app with deep link
+                    // Format: maya://qr?data=<qr_url>
+                    const deepLink = `paymaya://qr?data=${encodeURIComponent(qrUrl)}`;
+                    window.location.href = deepLink;
+                    
+                    // Fallback: if app doesn't open in 2 seconds, show instruction
+                    setTimeout(() => {
+                        alert('If Maya app did not open, please make sure it is installed on your device.');
+                    }, 2000);
+                }
+            });
+        }
+    }
+
+    // ---- Cancel QR ----
     cancelBtn.addEventListener("click", () => {
         if (!intentId) return;
 
