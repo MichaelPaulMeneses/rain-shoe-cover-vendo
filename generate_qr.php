@@ -1,11 +1,24 @@
 <?php
 header('Content-Type: application/json');
 
+// Log errors to help debug
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Don't display errors in response
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/mobile_payment_errors.log');
+
 $secretKey = "sk_live_WLCpGs66PbqcMjBaMVsuK5k6";
 
 // Get POST data
 $input = file_get_contents("php://input");
 $data = json_decode($input, true);
+
+// Log the incoming request
+file_put_contents(
+    __DIR__ . "/mobile_payment_log.txt",
+    date("Y-m-d H:i:s") . " Request: " . $input . PHP_EOL,
+    FILE_APPEND
+);
 
 $mobileNumber = $data['mobile'] ?? null;
 $wallet = $data['wallet'] ?? 'gcash';
@@ -23,7 +36,7 @@ if (!$mobileNumber) {
 if (!preg_match('/^\+639\d{9}$/', $mobileNumber)) {
     echo json_encode([
         'success' => false,
-        'message' => 'Invalid Philippine mobile number format'
+        'message' => 'Invalid mobile number format. Must be +639XXXXXXXXX'
     ]);
     exit;
 }
@@ -58,7 +71,16 @@ try {
     curl_close($ch);
 
     if ($httpCode !== 200) {
-        throw new Exception("Failed to create payment intent");
+        $errorResponse = json_decode($intentResponse, true);
+        $errorMsg = $errorResponse['errors'][0]['detail'] ?? 'Failed to create payment intent';
+        
+        file_put_contents(
+            __DIR__ . "/mobile_payment_log.txt",
+            date("Y-m-d H:i:s") . " Intent Error: " . $intentResponse . PHP_EOL,
+            FILE_APPEND
+        );
+        
+        throw new Exception($errorMsg);
     }
 
     $intent = json_decode($intentResponse, true);
@@ -95,7 +117,16 @@ try {
     curl_close($ch);
 
     if ($httpCode !== 200) {
-        throw new Exception("Failed to create payment method");
+        $errorResponse = json_decode($methodResponse, true);
+        $errorMsg = $errorResponse['errors'][0]['detail'] ?? 'Failed to create payment method';
+        
+        file_put_contents(
+            __DIR__ . "/mobile_payment_log.txt",
+            date("Y-m-d H:i:s") . " Method Error: " . $methodResponse . PHP_EOL,
+            FILE_APPEND
+        );
+        
+        throw new Exception($errorMsg);
     }
 
     $method = json_decode($methodResponse, true);
@@ -128,7 +159,16 @@ try {
     curl_close($ch);
 
     if ($httpCode !== 200) {
-        throw new Exception("Failed to attach payment method");
+        $errorResponse = json_decode($attachResponse, true);
+        $errorMsg = $errorResponse['errors'][0]['detail'] ?? 'Failed to attach payment method';
+        
+        file_put_contents(
+            __DIR__ . "/mobile_payment_log.txt",
+            date("Y-m-d H:i:s") . " Attach Error: " . $attachResponse . PHP_EOL,
+            FILE_APPEND
+        );
+        
+        throw new Exception($errorMsg);
     }
 
     $result = json_decode($attachResponse, true);
@@ -161,18 +201,34 @@ try {
     -------------------------------- */
     $nextAction = $result["data"]["attributes"]["next_action"] ?? null;
     
-    echo json_encode([
+    $response = [
         'success' => true,
         'intent_id' => $intentId,
         'status' => $result["data"]["attributes"]["status"],
         'next_action' => $nextAction,
-        'message' => 'Payment request sent successfully'
-    ]);
+        'message' => 'Payment request sent successfully. Please check your ' . ($wallet === 'gcash' ? 'GCash' : 'Maya') . ' app.'
+    ];
+    
+    file_put_contents(
+        __DIR__ . "/mobile_payment_log.txt",
+        date("Y-m-d H:i:s") . " Success Response: " . json_encode($response) . PHP_EOL,
+        FILE_APPEND
+    );
+    
+    echo json_encode($response);
 
 } catch (Exception $e) {
-    echo json_encode([
+    $errorResponse = [
         'success' => false,
         'message' => $e->getMessage()
-    ]);
+    ];
+    
+    file_put_contents(
+        __DIR__ . "/mobile_payment_log.txt",
+        date("Y-m-d H:i:s") . " Error Response: " . json_encode($errorResponse) . PHP_EOL,
+        FILE_APPEND
+    );
+    
+    echo json_encode($errorResponse);
 }
 ?>
