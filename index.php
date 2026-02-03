@@ -389,6 +389,8 @@ document.addEventListener("DOMContentLoaded", () => {
         payWithMobileBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
 
         try {
+            console.log('Sending payment request for:', '+63' + mobileNumber, 'Wallet:', wallet);
+            
             const response = await fetch('generate_mobile_payment.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -398,15 +400,28 @@ document.addEventListener("DOMContentLoaded", () => {
                 })
             });
 
-            let result;
+            console.log('Response status:', response.status);
+            console.log('Response OK:', response.ok);
+            
             const responseText = await response.text();
+            console.log('Response text:', responseText);
+            
+            let result;
+            
+            // Check if response is empty
+            if (!responseText || responseText.trim() === '') {
+                throw new Error('Empty response from server. Please check if generate_mobile_payment.php exists.');
+            }
             
             try {
                 result = JSON.parse(responseText);
             } catch (parseError) {
                 console.error('Failed to parse response:', responseText);
-                throw new Error('Invalid response from server');
+                console.error('Parse error:', parseError);
+                throw new Error('Invalid JSON response from server. Check console for details.');
             }
+
+            console.log('Parsed result:', result);
 
             if (result.success) {
                 intentId = result.intent_id;
@@ -427,7 +442,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         } catch (error) {
             console.error('Payment error:', error);
-            mobileError.textContent = error.message || 'An error occurred. Please try again.';
+            mobileError.textContent = error.message || 'Connection error. Please check if the server file exists.';
             mobileError.style.display = 'block';
         } finally {
             payWithMobileBtn.disabled = false;
