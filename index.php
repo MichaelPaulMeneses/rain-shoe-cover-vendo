@@ -335,9 +335,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
             currentPaymentMethod = tabName;
 
-            // Load QR if switching to QR tab and not loaded yet
-            if (tabName === 'qr' && qrContainer.innerHTML === '<p>Loading QR...</p>') {
-                loadQRCode();
+            // Load QR if switching to QR tab
+            if (tabName === 'qr') {
+                // Only load if not already loaded or if there's an error
+                const currentContent = qrContainer.innerHTML.trim();
+                if (currentContent === '<p>Loading QR...</p>' || 
+                    currentContent.includes('success') || 
+                    currentContent === 'Generating QR...' ||
+                    currentContent === '') {
+                    loadQRCode();
+                }
             }
         });
     });
@@ -391,7 +398,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 })
             });
 
-            const result = await response.json();
+            let result;
+            const responseText = await response.text();
+            
+            try {
+                result = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Failed to parse response:', responseText);
+                throw new Error('Invalid response from server');
+            }
 
             if (result.success) {
                 intentId = result.intent_id;
@@ -412,7 +427,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         } catch (error) {
             console.error('Payment error:', error);
-            mobileError.textContent = 'An error occurred. Please try again.';
+            mobileError.textContent = error.message || 'An error occurred. Please try again.';
             mobileError.style.display = 'block';
         } finally {
             payWithMobileBtn.disabled = false;
@@ -488,9 +503,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ---- Load QR when modal opens (QR tab is default) ----
     qrModalEl.addEventListener("shown.bs.modal", () => {
-        if (currentPaymentMethod === 'qr') {
-            loadQRCode();
-        }
+        // Reset to QR tab by default
+        document.querySelectorAll('.payment-tab').forEach(t => t.classList.remove('active'));
+        document.querySelector('[data-tab="qr"]').classList.add('active');
+        
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        document.getElementById('qrTabContent').classList.add('active');
+        
+        currentPaymentMethod = 'qr';
+        
+        // Load QR code
+        loadQRCode();
     });
 
     // ---- Reset on modal close ----
